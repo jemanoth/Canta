@@ -47,6 +47,13 @@
                 <category android:name="android.intent.category.LEANBACK_LAUNCHER" />
             </intent-filter>
         </activity>
+        <receiver
+            android:name=".ApplyPresetReceiver"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="io.github.samolego.canta.action.APPLY_PRESET" />
+            </intent-filter>
+        </receiver>
         <provider
             android:name="rikka.shizuku.ShizukuProvider"
             android:authorities="${applicationId}.shizuku"

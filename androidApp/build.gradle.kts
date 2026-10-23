@@ -11,6 +11,10 @@ val keystoreProperties = Properties().apply {
     rootProject.file("key.properties").takeIf { it.exists() }?.inputStream()?.use(::load)
 }
 
+val automationToken: String = Properties().apply {
+    rootProject.file("local.properties").takeIf { it.exists() }?.inputStream()?.use(::load)
+}.getProperty("automation.token", "").replace("\\", "").replace("\"", "")
+
 android {
     namespace = "io.github.samolego.canta"
     compileSdk = libs.versions.android.compileSdk.get().toInt()
@@ -27,6 +31,10 @@ android {
         targetSdk = libs.versions.android.targetSdk.get().toInt()
         versionCode = providers.gradleProperty("version_code").get().toInt()
         versionName = providers.gradleProperty("version_name").get()
+
+        // Secret the automation broadcast must carry (see ApplyPresetReceiver).
+        // Set `automation.token=...` in local.properties; empty disables the receiver.
+        buildConfigField("String", "AUTOMATION_TOKEN", "\"${automationToken}\"")
     }
 
     signingConfigs {
@@ -54,6 +62,7 @@ android {
 
     buildFeatures {
         compose = true
+        buildConfig = true
     }
 
     packaging {
@@ -116,10 +125,12 @@ androidComponents.onVariants { variant ->
 
 dependencies {
     implementation(project(":composeApp"))
+    implementation(project(":packages"))
 
     // Required by the ShizukuProvider declared in AndroidManifest.xml.
     implementation(libs.shizuku.provider)
 
     implementation(libs.androidx.activity.compose)
     implementation(libs.androidx.fragment)
+    implementation(libs.kotlinx.coroutines.core)
 }
