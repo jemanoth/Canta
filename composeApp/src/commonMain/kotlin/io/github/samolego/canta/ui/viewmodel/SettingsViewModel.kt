@@ -10,6 +10,8 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import kotlin.uuid.ExperimentalUuidApi
+import kotlin.uuid.Uuid
 
 /**
  * Exposes [CantaSettings] as [StateFlow]s for the UI. Every value is derived
@@ -33,6 +35,7 @@ class SettingsViewModel(
     val allowUnsafeUninstalls = settingsStore.allowUnsafeUninstallsFlow.state(false)
     val hideSuccessDialog = settingsStore.hideSuccessDialogFlow.state(false)
     val authEnabled = settingsStore.authEnabledFlow.state(false)
+    val automationToken = settingsStore.automationTokenFlow.state("")
 
     /** Set once the user accepted the disclaimer without "never show again". */
     private val riskAcceptedThisSession = MutableStateFlow(false)
@@ -58,5 +61,12 @@ class SettingsViewModel(
     fun saveAllowUnsafeUninstalls(allow: Boolean) = save { setAllowUnsafeUninstalls(allow) }
     fun saveHideSuccessDialog(hide: Boolean) = save { setHideSuccessDialog(hide) }
     fun saveAuthEnabled(enabled: Boolean) = save { setAuthEnabled(enabled) }
+
+    /** Creates a new random automation token, replacing any existing one. */
+    @OptIn(ExperimentalUuidApi::class)
+    fun generateAutomationToken() = save { setAutomationToken(Uuid.random().toHexString()) }
+
+    /** Removes the token, which turns the automation broadcast off. */
+    fun clearAutomationToken() = save { setAutomationToken("") }
 
 }

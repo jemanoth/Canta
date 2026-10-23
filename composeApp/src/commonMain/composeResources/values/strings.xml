@@ -146,6 +146,11 @@
         name="commits_url_description"
     >Where to get commit info for updates from</string>
     <string name="advanced_settings">Advanced settings</string>
+    <string name="automation_token">Automation token</string>
+    <string name="automation_token_off">Off. Tap to generate a token that lets automation apps apply a preset.</string>
+    <string name="automation_token_copy_hint">%1$s\n\nTap to copy. Send it as the "token" extra of the APPLY_PRESET broadcast.</string>
+    <string name="automation_token_copied">Token copied</string>
+    <string name="automation_token_clear">Turn off and delete token</string>
     <string name="click_to_expand">Click to expand</string>
     <string name="bloat_list_url">Bloat list URL</string>
     <string

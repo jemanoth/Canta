@@ -15,11 +15,14 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Message
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Key
 import androidx.compose.material.icons.filled.Link
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Update
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -44,6 +47,11 @@ import io.github.samolego.canta.generated.resources.allow_unsafe_uninstalls_desc
 import io.github.samolego.canta.generated.resources.app_version
 import io.github.samolego.canta.generated.resources.auth_required
 import io.github.samolego.canta.generated.resources.auth_required_description
+import io.github.samolego.canta.generated.resources.automation_token
+import io.github.samolego.canta.generated.resources.automation_token_clear
+import io.github.samolego.canta.generated.resources.automation_token_copied
+import io.github.samolego.canta.generated.resources.automation_token_copy_hint
+import io.github.samolego.canta.generated.resources.automation_token_off
 import io.github.samolego.canta.generated.resources.auto_update_bloat_list
 import io.github.samolego.canta.generated.resources.auto_update_bloat_list_description
 import io.github.samolego.canta.generated.resources.bloat_list_url
@@ -81,6 +89,8 @@ fun SettingsScreen(
     val authEnabled by settingsViewModel.authEnabled.collectAsStateWithLifecycle()
     val bloatListUrl by settingsViewModel.bloatListUrl.collectAsStateWithLifecycle()
     val commitsUrl by settingsViewModel.commitsUrl.collectAsStateWithLifecycle()
+    val automationToken by settingsViewModel.automationToken.collectAsStateWithLifecycle()
+    val tokenCopiedMessage = stringResource(Res.string.automation_token_copied)
     var advancedSettingsExpanded by rememberSaveable { mutableStateOf(false) }
     val authRequiredTitle = stringResource(Res.string.auth_required)
     val authRequiredSubtitle = stringResource(Res.string.auth_required_description)
@@ -166,6 +176,33 @@ fun SettingsScreen(
                         keyboardType = KeyboardType.Uri,
                         storedValue = commitsUrl,
                         onCommit = settingsViewModel::saveCommitsUrl,
+                    )
+                    SettingsItem(
+                        title = stringResource(Res.string.automation_token),
+                        description = if (automationToken.isEmpty()) {
+                            stringResource(Res.string.automation_token_off)
+                        } else {
+                            stringResource(Res.string.automation_token_copy_hint, automationToken)
+                        },
+                        icon = Icons.Default.Key,
+                        onClick = {
+                            if (automationToken.isEmpty()) {
+                                settingsViewModel.generateAutomationToken()
+                            } else {
+                                platform.copyToClipboard(automationToken)
+                                platform.showMessage(tokenCopiedMessage)
+                            }
+                        },
+                        trailing = if (automationToken.isEmpty()) null else {
+                            {
+                                IconButton(onClick = settingsViewModel::clearAutomationToken) {
+                                    Icon(
+                                        imageVector = Icons.Default.Delete,
+                                        contentDescription = stringResource(Res.string.automation_token_clear),
+                                    )
+                                }
+                            }
+                        },
                     )
                 }
             }

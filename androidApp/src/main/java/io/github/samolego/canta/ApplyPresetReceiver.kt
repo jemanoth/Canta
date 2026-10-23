@@ -23,8 +23,9 @@ import kotlinx.coroutines.withTimeoutOrNull
  *
  * Extras:
  *  - [EXTRA_PRESET]: the preset's name (or its uuid).
- *  - [EXTRA_TOKEN]: must equal the build-time `automation.token`; with no
- *    token configured the receiver ignores every broadcast.
+ *  - [EXTRA_TOKEN]: must equal the token shown in Canta's Settings → Advanced
+ *    settings → Automation token; with no token generated the receiver ignores
+ *    every broadcast.
  *  - [EXTRA_RESET_TO_FACTORY] (optional boolean): also reset updated system apps.
  *
  * Only apps that are still installed for the user are touched, so running the
@@ -38,21 +39,23 @@ class ApplyPresetReceiver : BroadcastReceiver() {
 
     override fun onReceive(context: Context, intent: Intent) {
         if (intent.action != ACTION_APPLY_PRESET) return
-        if (!tokenMatches(intent.getStringExtra(EXTRA_TOKEN))) {
-            Log.w(TAG, "Rejected broadcast: missing or wrong token")
-            return
-        }
+        val givenToken = intent.getStringExtra(EXTRA_TOKEN)
         val presetKey = intent.getStringExtra(EXTRA_PRESET)
-        if (presetKey.isNullOrBlank()) {
-            Log.w(TAG, "Rejected broadcast: no '$EXTRA_PRESET' extra")
-            return
-        }
         val resetToFactory = intent.getBooleanExtra(EXTRA_RESET_TO_FACTORY, false)
 
         val app = context.applicationContext as CantaApplication
         val pending = goAsync()
         CoroutineScope(Dispatchers.IO).launch {
             try {
+                val expected = app.dependencies.settings.automationTokenFlow.first()
+                if (!tokenMatches(expected, givenToken)) {
+                    Log.w(TAG, "Rejected broadcast: missing or wrong token")
+                    return@launch
+                }
+                if (presetKey.isNullOrBlank()) {
+                    Log.w(TAG, "Rejected broadcast: no '$EXTRA_PRESET' extra")
+                    return@launch
+                }
                 // A broadcast gets about ten seconds, so stop a little before that.
                 withTimeoutOrNull(BROADCAST_BUDGET_MS) { apply(app, presetKey, resetToFactory) }
                     ?: Log.w(TAG, "Timed out; run the broadcast again to finish the rest")
@@ -101,8 +104,7 @@ class ApplyPresetReceiver : BroadcastReceiver() {
             true
         } ?: false
 
-    private fun tokenMatches(given: String?): Boolean {
-        val expected = BuildConfig.AUTOMATION_TOKEN
+    private fun tokenMatches(expected: String, given: String?): Boolean {
         if (expected.isEmpty() || given == null) return false
         return MessageDigest.isEqual(expected.toByteArray(), given.toByteArray())
     }
