@@ -4,9 +4,11 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.util.Log
+import io.github.samolego.canta.core.CantaHandler
 import java.security.MessageDigest
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
@@ -27,6 +29,10 @@ import kotlinx.coroutines.withTimeoutOrNull
  *
  * Only apps that are still installed for the user are touched, so running the
  * same preset repeatedly is cheap. Shizuku must be running and authorized.
+ *
+ * Canta's process must already be running: when this broadcast cold-starts it,
+ * Shizuku reports the app as not authorized. Open Canta first (an automation's
+ * "launch app" action is enough), wait a few seconds, then send the broadcast.
  */
 class ApplyPresetReceiver : BroadcastReceiver() {
 
@@ -66,7 +72,7 @@ class ApplyPresetReceiver : BroadcastReceiver() {
             Log.w(TAG, "No preset named '$presetKey'")
             return
         }
-        if (!deps.handler.isAuthorized) {
+        if (!awaitAuthorization(deps.handler)) {
             Log.w(TAG, "Shizuku is not running or Canta is not authorized")
             return
         }
@@ -85,6 +91,16 @@ class ApplyPresetReceiver : BroadcastReceiver() {
         Log.i(TAG, "Preset '${preset.name}': removed $done of ${targets.size}")
     }
 
+    /**
+     * The broadcast may have started this process cold, and Shizuku hands the
+     * app its binder a moment after that, so give it a few seconds to arrive.
+     */
+    private suspend fun awaitAuthorization(handler: CantaHandler): Boolean =
+        withTimeoutOrNull(AUTH_WAIT_MS) {
+            while (!handler.isAuthorized) delay(AUTH_POLL_MS)
+            true
+        } ?: false
+
     private fun tokenMatches(given: String?): Boolean {
         val expected = BuildConfig.AUTOMATION_TOKEN
         if (expected.isEmpty() || given == null) return false
@@ -94,6 +110,8 @@ class ApplyPresetReceiver : BroadcastReceiver() {
     companion object {
         private const val TAG = "ApplyPresetReceiver"
         private const val BROADCAST_BUDGET_MS = 8_000L
+        private const val AUTH_WAIT_MS = 4_000L
+        private const val AUTH_POLL_MS = 100L
 
         const val ACTION_APPLY_PRESET = "io.github.samolego.canta.action.APPLY_PRESET"
         const val EXTRA_PRESET = "preset"
